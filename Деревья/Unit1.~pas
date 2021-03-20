@@ -1,0 +1,598 @@
+unit Unit1;
+
+interface
+
+uses
+  Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
+  Dialogs, StdCtrls, ComCtrls, unit2;
+
+type
+  TForm1 = class(TForm)
+    Button1: TButton;
+    Edit1: TEdit;
+    RadioButton1: TRadioButton;
+    RadioButton2: TRadioButton;
+    TreeView1: TTreeView;
+    Button2: TButton;
+    Button3: TButton;
+    Button4: TButton;
+    Button5: TButton;
+    Button6: TButton;
+    Button7: TButton;
+    Button8: TButton;
+    procedure FormActivate(Sender: TObject);
+    procedure Button1Click(Sender: TObject);
+    procedure Button2Click(Sender: TObject);
+    procedure Button3Click(Sender: TObject);
+    procedure Button4Click(Sender: TObject);
+    procedure Button5Click(Sender: TObject);
+    procedure Button6Click(Sender: TObject);
+    procedure Button7Click(Sender: TObject);
+    procedure Button8Click(Sender: TObject);
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+  pTree = ^tTree;
+  tTree = record
+    data : integer;
+    Right, Left, Parent : pTree;
+  end;
+
+  pAVLTree = ^tAVLTree;
+  tAVLTree = record
+    data, height : integer;
+    left,right : pAVLTree;
+  end;
+
+var
+  Form1: TForm1;
+  root : pTree;
+  AVLroot : pAVLTree;
+  TTN : TTreeNode;
+  T : pAVLTree;
+  AR : array of pTree;
+
+implementation
+
+{$R *.dfm}
+
+
+//Поиск вершины со значением Х {AVL}
+function Find(X : integer; T : pAVLTree): pAVLTree;
+begin
+  if T = nil then begin
+    Find:=nil;
+    exit;
+  end;
+  if X<T.data then begin
+    Find:= Find(X,T.left);
+    exit;
+  end
+  else
+    if X > T.data then begin
+      Find:=Find(X,T.right);
+      exit;
+    end
+    else
+      Find:=T;
+end;
+
+//Поиск вершины с минимальным значением
+function FindMin( T : pAVLTree):pAVLTree;
+begin
+    if T.left <> nil then
+      FindMin:=FindMin(T.left)
+    else
+      FindMin:= T;
+end;
+
+//Поиск вершины с максимальным значением
+function FindMax( T : pAVLTree):pAVLTree;
+begin
+  if T <> nil then
+    while T.right <> nil do
+      T:=T.right;
+  FindMax:=T;
+end;
+
+//Вес вершины
+function Height( P : pAVLTree):integer;
+begin
+  if P = nil then begin
+    Height:=0;
+    exit;
+  end
+  else
+  Height:=P.height;
+end;
+
+//Функция возвращает максимальное из двух чисел
+function Max(Lhs, Rhs : integer):integer;
+begin
+  if Lhs > Rhs then
+    Max:=Lhs
+  else Max := Rhs;
+end;
+
+procedure fixheight(p:pAVLTree);
+var
+  hl,hr:integer;
+begin
+  hl := height(p.left);
+  hr := height(p.right);
+  if hl > hr then p.height:=hl +1
+  else p.height := hr + 1;
+end;
+
+
+//функция выполняет поворот между вершинами K2 и его левым потомком
+function RotateRight(K2 : pAVLTree):pAVLTree;
+var
+  K1 : pAVLTree;
+begin
+  K1 := K2.left;
+  K2.left:=K1.right;
+  if K2 = AVLroot then
+    AVLroot := K1;
+  K1.right:=K2;
+  fixheight(K2);
+  fixheight(K1);
+  RotateRight:=K1;
+end;
+
+//функция выполняет поворот между вершинами K1 и его правым потомком
+function RotateLeft(K1 : pAVLTree): pAVLTree;
+var
+  K2 : pAVLTree;
+begin
+  K2 := K1.right;
+  K1.Right := K2.Left;
+  if K1 = AVLroot then
+    AVLroot := K2;
+  K2.left := K1;
+  fixheight(K1);
+  fixheight(K2);
+  RotateLeft:=K2;
+end;
+
+function balance(var p : pAVLTree):pAVLTree;
+begin
+  fixheight(p);
+  if height(p.right)-height(p.left) = 2 then begin
+    if height(p.right.right) - height(p.right.left) < 0 then
+      p.right:=rotateright(p.right);
+    balance:=rotateleft(p);
+    exit;
+  end;
+  if height(p.right)-height(p.left) = -2 then begin
+      if height(p.left.right) - height(p.left.left) > 0 then
+      p.left:=rotateleft(p.right);
+    balance:=rotateright(p);
+    exit;
+  end;
+  balance:=p;
+end;
+
+function removeMin(p : pAVLTree):pAVLTree;
+begin
+  if p.left = nil then begin
+    removeMin:=p.right;
+    exit;
+  end;
+  p.left:=removeMin(p.left);
+  removeMin:=balance(p);
+end;
+
+function Delete(X : integer; p : pAVLTree):pAVLTree;
+var
+  q,r,min:pAVLTree;
+  kor : boolean;
+begin
+kor:=false;
+  if p = nil then begin
+    Delete := nil;
+    exit;
+  end;
+  if X < p.data then
+    p.left:=delete(X,p.left)
+  else
+    if X > p.data then
+      p.right := delete(X,p.right)
+    else begin
+      q := p.left;
+      r := p.right;
+      if avlroot = p then kor:=true;
+      dispose(p);
+      if r = nil then begin
+        Delete:=q;
+        exit;
+      end;
+      min:=findmin(r);
+      min.right:=removemin(r);
+      min.left:=q;
+      if kor then avlroot:=min;
+      delete:=balance(min);
+      exit;
+    end;
+  delete := balance(p);
+end;
+
+//Вставка элемента в АВЛ-дерево
+function Insert(X : integer;var T : pAVLTree): pAVLTree;
+begin
+  if T = nil then begin
+    new(T);
+    T.data:=X; T.height:=1;
+    T.left:=nil; T.right:=nil;
+    insert:=T;
+    exit;
+  end;
+  if X < T.data then
+    T.left:=Insert(X,T.left)
+  else
+    T.right:=insert(X,t.right);
+  insert := balance(T);
+end;
+
+
+
+//Возвращает значение в вершине
+function Retrieve(P : pAVLTree):integer;
+begin
+  Retrieve:=P.data;
+end;
+
+//Вывод АВЛ-дерева
+procedure PrintAVLT(Tree:pAVLTree; Pointer:TTreeNode);
+var
+  CurrPointer:TTreeNode;
+begin
+    If Tree = nil then Exit;
+    CurrPointer:=Form1.TreeView1.Items.AddChild(Pointer,IntToStr(Tree^.data));
+    PrintAVLT(Tree^.Left,CurrPointer);
+    PrintAVLT(Tree^.Right,CurrPointer);
+  end;
+
+//Вставка элемента
+procedure InsertNode(Data : integer);
+var
+  x,current,parent : pTree;
+begin
+  current:=root;
+  parent:=nil;
+  while current <> nil do begin
+    if Data = current^.data then exit;
+    parent:=current;
+    if data < current^.data then
+      current:=current^.left
+    else current:=current^.right;
+  end;
+  new(x);
+  x^.data := data;
+  x^.parent:=parent;
+  x^.left:=nil;
+  x^.right:=nil;
+  if parent <> nil then
+    if x.data < parent.data then
+      parent.left:=x
+    else parent.right := x
+  else
+    root:=x;
+end;
+
+//Удаление элемента
+procedure DeleteNode(z : pTree);
+var
+  x,y : pTree;
+begin
+  if z = nil then exit;
+  if (z.Left = nil) and (z.Right = nil) then
+    y:=z
+  else begin
+    if z.Right <> nil then begin
+      y:=z.Right;
+      while y.Left <> nil do
+        y:=y.Left;
+    end;
+  end;
+  if y.Left <> nil then
+    x:=y.Left
+  else
+    x:=y.Right;
+  if x<>nil then x.Parent:=y.Parent;
+  if y.Parent<>nil then
+    if y = y.Parent.Left then
+      y.Parent.Left:=x
+    else
+      y.Parent.Right:=x
+  else
+    root:=x;
+  if y <> z then begin
+    y.Left:=z.Left;
+    if y.Left<>nil then
+      y.Left.Parent:=y;
+    y.Right:=z.Right;
+    if y.Right <> nil then
+      y.Right.Parent:=y;
+    y.Parent:=z.Parent;
+    if z.Parent <> nil then
+      if z = z.Parent.Left then
+        z.Parent.Left:=y
+      else
+        z.Parent.Right:=y
+    else
+      root:=y;
+    dispose(z);
+  end
+  else
+    dispose(y);
+end;
+
+//Удаление дерева
+procedure DelTree(curr : pTree);
+begin
+  if curr <> nil then begin
+    DelTree(curr^.Left);
+    DelTree(curr^.Right);
+    dispose(curr);
+  end;
+end;
+
+//Удаление АВЛ-дерева
+procedure DelAVLTree(curr : pAVLTree);
+begin
+  if curr <> nil then begin
+    DelAVLTree(curr^.Left);
+    DelAVLTree(curr^.Right);
+    dispose(curr);
+  end;
+end;
+
+//Поиск узла
+function findNode(data : integer): pTree;
+var
+  current : pTree;
+begin
+  current:=root;
+  while current <> nil do
+    if data = current.data then begin
+      findNode:=current;
+      exit;
+    end
+    else
+      if data < current.data then
+        current:=current.Left
+      else current := current.Right;
+    findNode:=nil;
+end;
+
+//Активация формы
+procedure TForm1.FormActivate(Sender: TObject);
+begin
+  Form1.RadioButton1.Checked:=true;
+end;
+
+//Вывод дерева
+procedure PrintT(Tree:pTree; Pointer:TTreeNode);
+var
+  CurrPointer:TTreeNode;
+begin
+    If Tree = nil then Exit;
+    CurrPointer:=Form1.TreeView1.Items.AddChild(Pointer,IntToStr(Tree^.data));
+    PrintT(Tree^.Left,CurrPointer);
+    PrintT(Tree^.Right,CurrPointer);
+  end;
+
+procedure TForm1.Button1Click(Sender: TObject);
+begin
+  if Form1.RadioButton1.Checked then
+    InsertNode(StrToInt(Form1.Edit1.Text))
+  else begin
+    if find(StrToInt(Form1.Edit1.Text),Avlroot) = nil then
+      Insert(StrToInt(Form1.Edit1.Text),AVLroot);
+  end;
+  Form1.Edit1.Text:='';
+end;
+
+procedure TForm1.Button2Click(Sender: TObject);
+begin
+  if Form1.TreeView1.Items.GetFirstNode <> nil then
+    Form1.TreeView1.Items[0].Delete;
+  if Form1.RadioButton1.Checked then
+    PrintT(root,TTN)
+  else PrintAVLT(AVLroot, TTN);
+
+  Form1.TreeView1.FullExpand;
+end;
+
+procedure TForm1.Button3Click(Sender: TObject);
+begin
+  if Form1.RadioButton1.Checked then
+    if findNode(StrToInt(Form1.Edit1.Text)) <> nil then
+      showmessage('Элемент содержится в дереве')
+    else showmessage('Элемента нет в дереве')
+  else
+    if find(StrToInt(Form1.Edit1.Text),Avlroot) <> nil then
+      showmessage('Элемент сдержится в дереве')
+    else showmessage('Элемента нет в дереве');
+
+
+  Form1.Edit1.Text:='';
+end;
+
+procedure TForm1.Button4Click(Sender: TObject);
+begin
+  if Form1.RadioButton1.Checked then
+    DeleteNode(findNode(StrToInt(Form1.Edit1.Text)))
+  else begin
+      T:=Find(StrToInt(Form1.Edit1.Text),AVLroot);
+      if T <> nil then
+        Delete(StrToInt(Form1.Edit1.Text),Avlroot);
+
+  end;
+
+  Form1.Edit1.Text:='';
+end;
+
+procedure TForm1.Button5Click(Sender: TObject);
+begin
+  if Form1.RadioButton1.Checked then begin
+    DelTree(root);
+    root:=nil;
+  end
+  else DelAVLTree(AVLroot);
+    AVLroot:=nil;
+end;
+
+procedure BalanceBin(p : pTree);
+var
+  k:integer;
+begin
+  if p <> nil then begin
+    if p.data < root.data then begin
+      Setlength(AR,length(AR)+1);
+      AR[length(AR)-1]:=p;
+    end;
+    BalanceBin(p.Left);
+    BalanceBin(p.Right);
+  end;
+end;
+
+
+procedure TForm1.Button6Click(Sender: TObject);
+var
+  k,i : integer;
+  current : pTree;
+begin
+  {if root <> nil then begin
+    k:=root.data;
+    DeleteNode(root);
+    insertNode(K*K);
+  end;}
+  root.data:=root.data*root.data;
+  if root <> nil then
+    if (root.right <> nil) then begin
+        balanceBin(root.Right);
+        for i:=length(AR)-1 downto 0 do begin
+          k:=AR[i].data;
+          DeleteNode(AR[i]);
+          InsertNode(K);
+        end;  
+        {
+        current := root.left;
+        if current <> nil then begin
+          while current.right <> nil do
+            current:=current.right;
+          current.right:=root.right;
+          root.right:=current.right.right;
+          current.right.right:=nil
+        end
+        else begin
+          root.left:=root.right;
+          root.right:=root.left.right;
+          root.left.right:=nil;
+        end  }
+      end;
+
+
+end;
+
+procedure Print2(Tree:pAVLTree; Pointer:TTreeNode);
+var
+  CurrPointer:TTreeNode;
+begin
+    If Tree = nil then Exit;
+    CurrPointer:=Form2.TreeView1.Items.AddChild(Pointer,IntToStr(Tree^.data));
+    Print2(Tree^.Left,CurrPointer);
+    Print2(Tree^.Right,CurrPointer);
+  end;
+
+procedure Print3(Tree:pAVLTree; Pointer:TTreeNode);
+var
+  CurrPointer:TTreeNode;
+begin
+    If Tree = nil then Exit;
+    CurrPointer:=Form2.TreeView2.Items.AddChild(Pointer,IntToStr(Tree^.data));
+    Print3(Tree^.Left,CurrPointer);
+    Print3(Tree^.Right,CurrPointer);
+  end;
+
+procedure TForm1.Button7Click(Sender: TObject);
+begin
+  if AVLroot = nil then showmessage('Дерево пусто')
+  else begin
+    if Form2.TreeView1.Items.GetFirstNode <> nil then
+      Form2.TreeView1.Items[0].Delete;
+    if Form2.TreeView2.Items.GetFirstNode <> nil then
+      Form2.TreeView2.Items[0].Delete;
+    if AVLroot.Right <> nil then begin
+      Showmessage('В данном дереве все поддеревья являются бинарными упорядоченными' +
+        #13#10 + 'Примером служит следующее поддерево :');
+      print2(AVLroot.right,TTN);
+      Form2.TreeView1.FullExpand;
+      Form2.showmodal;
+    end
+    else
+      if AVLroot.left <> nil then begin
+        Showmessage('В данном дереве все поддеревья являются бинарными упорядоченными' +
+          #13#10 + 'Примером служит следующее поддерево :');
+        print2(AVLroot.left,TTN);
+        form2.TreeView1.FullExpand;
+        Form2.showmodal;
+      end
+      else showmessage('В дереве нет подходящих поддеревьев');
+  end;
+
+end;
+
+procedure Obhod(var count : integer; p : pAVLTree);
+begin
+  if p <> nil then begin
+    inc(count);
+    Obhod(count,p.left);
+    Obhod(count,p.right);
+  end;
+end;
+
+procedure TForm1.Button8Click(Sender: TObject);
+var
+  count1, count2: integer;
+begin
+  if AVLroot <> nil then begin
+  count1:=0;
+  count2:=0;
+  Obhod(count1,AVLroot.right);
+  Obhod(count2,AVLroot.left);
+  if Form2.TreeView1.Items.GetFirstNode <> nil then
+    Form2.TreeView1.Items[0].Delete;
+  if Form2.TreeView2.Items.GetFirstNode <> nil then
+    Form2.TreeView2.Items[0].Delete;
+  if count1 > count2 then begin
+    Showmessage('Поддерево максимальной высоты приведено в окне просмотра :');
+    print2(AVLroot.right,TTN);
+    form2.TreeView1.FullExpand;
+    Form2.showmodal;
+  end
+  else
+    if count2 > count1 then begin
+      Showmessage('Поддерево максимальной высоты приведено в окне просмотра :');
+      print2(AVLroot.left,TTN);
+      form2.TreeView1.FullExpand;
+      Form2.showmodal;
+    end
+    else begin
+      showmessage ('В дереве найдено два поддерева максимальной высоты' +
+        #13#10 + 'Они приведены в окне просмотра');
+      print2(AVLroot.left,TTN);
+      print3(AVLroot.right,TTN);
+      form2.TreeView1.FullExpand;
+      Form2.TreeView2.FullExpand;
+      Form2.showmodal;
+    end;
+  end;
+end;
+
+end.
